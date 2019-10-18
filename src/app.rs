@@ -15,6 +15,7 @@ use rspotify::spotify::model::search::{
 };
 use rspotify::spotify::model::track::{FullTrack, SavedTrack, SimplifiedTrack};
 use rspotify::spotify::senum::{Country, RepeatState};
+use std::collections::HashSet;
 use std::time::Instant;
 use tui::layout::Rect;
 
@@ -208,6 +209,7 @@ pub struct App {
     pub playlist_tracks: Vec<PlaylistTrack>,
     pub playlists: Option<Page<SimplifiedPlaylist>>,
     pub recently_played: SpotifyResultAndSelectedIndex<Option<CursorBasedPage<PlayHistory>>>,
+    pub saved_track_ids: HashSet<String>,
     pub search_results: SearchResult,
     pub selected_album: Option<SelectedAlbum>,
     pub selected_album_full: Option<SelectedFullAlbum>,
@@ -253,6 +255,7 @@ impl App {
             input_cursor_position: 0,
             playlist_tracks: vec![],
             playlists: None,
+            saved_track_ids: HashSet::new(),
             search_results: SearchResult {
                 hovered_block: SearchResultBlock::SongSearch,
                 selected_block: SearchResultBlock::Empty,
@@ -298,8 +301,14 @@ impl App {
             let context = spotify.current_playback(None);
             if let Ok(ctx) = context {
                 if let Some(c) = ctx {
-                    self.current_playback_context = Some(c);
+                    self.current_playback_context = Some(c.to_owned());
                     self.instant_since_last_current_playback_poll = Instant::now();
+
+                    // if let Some(track) = c.item {
+                    //     if let Some(id) = track.id {
+                    //         self.get_song_is_liked(id);
+                    //     }
+                    // }
                 }
             };
         }
@@ -734,5 +743,25 @@ impl App {
                 }
             };
         };
+    }
+
+    pub fn current_user_saved_tracks_contains(&mut self, ids: Vec<String>) {
+        if let Some(spotify) = &self.spotify {
+            match spotify.current_user_saved_tracks_contains(&ids) {
+                Ok(saved_tracks) => {
+                    let mut index = 0;
+                    for liked in saved_tracks.iter() {
+                        if liked.to_owned() {
+                            let track = &ids[index];
+                            self.saved_track_ids.insert(track.to_owned());
+                        }
+                        index = index + 1;
+                    }
+                }
+                Err(e) => {
+                    self.handle_error(e);
+                }
+            }
+        }
     }
 }

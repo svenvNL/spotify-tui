@@ -559,6 +559,13 @@ where
                 RepeatState::Context => "All",
             };
 
+            let mut liked_text = "";
+            if let Some(track_id) = &track_item.id {
+                if app.saved_track_ids.contains(track_id) {
+                    liked_text = "♥";
+                }
+            };
+
             let title = format!(
                 "{} ({} | Shuffle: {} | Repeat: {} | Volume: {}%)",
                 play_title,
@@ -584,11 +591,13 @@ where
             )
             .style(Style::default().fg(Color::White))
             .block(
-                Block::default().title(&track_item.name).title_style(
-                    Style::default()
-                        .fg(Color::LightCyan)
-                        .modifier(Modifier::BOLD),
-                ),
+                Block::default()
+                    .title(&format!("{} {}", &track_item.name, liked_text))
+                    .title_style(
+                        Style::default()
+                            .fg(Color::LightCyan)
+                            .modifier(Modifier::BOLD),
+                    ),
             )
             .render(f, chunks[0]);
 
