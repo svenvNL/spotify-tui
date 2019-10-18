@@ -2,6 +2,7 @@ mod app;
 mod banner;
 mod config;
 mod handlers;
+mod onboarding;
 mod redirect_uri;
 mod ui;
 mod util;
@@ -26,6 +27,7 @@ use tui::Terminal;
 use app::{ActiveBlock, App};
 use banner::BANNER;
 use config::{ClientConfig, LOCALHOST};
+use onboarding::Onboarding;
 use redirect_uri::redirect_uri_web_server;
 use util::{Event, Events};
 
@@ -77,6 +79,12 @@ fn main() -> Result<(), failure::Error> {
     });
 
     let mut client_config = ClientConfig::new();
+    let mut onboarding = Onboarding::new();
+
+    if !onboarding.is_done() {
+        onboarding.board()?;
+    }
+
     client_config.load_config()?;
 
     let config_paths = client_config.get_or_build_paths()?;

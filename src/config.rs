@@ -1,9 +1,8 @@
-use super::banner::BANNER;
 use dirs;
 use failure::err_msg;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io::{stdin, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 pub const LOCALHOST: &str = "http://localhost:8888/callback";
@@ -78,64 +77,23 @@ impl ClientConfig {
 
     pub fn load_config(&mut self) -> Result<(), failure::Error> {
         let paths = self.get_or_build_paths()?;
-        if paths.config_file_path.exists() {
-            let config_string = fs::read_to_string(&paths.config_file_path)?;
-            let config_yml: ClientConfig = serde_yaml::from_str(&config_string)?;
+        let config_string = fs::read_to_string(&paths.config_file_path)?;
+        let config_yml: ClientConfig = serde_yaml::from_str(&config_string)?;
 
-            self.client_id = config_yml.client_id;
-            self.client_secret = config_yml.client_secret;
-            self.device_id = config_yml.device_id;
+        self.client_id = config_yml.client_id;
+        self.client_secret = config_yml.client_secret;
+        self.device_id = config_yml.device_id;
 
-            Ok(())
-        } else {
-            println!("{}", BANNER);
+        Ok(())
+    }
 
-            println!(
-                "Config will be saved to {}",
-                paths.config_file_path.display()
-            );
+    pub fn save(&mut self) -> Result<(), failure::Error> {
+        let content_yml = serde_yaml::to_string(&self)?;
+        let paths = self.get_or_build_paths()?;
 
-            println!("\nHow to get setup:\n");
+        let mut new_config = fs::File::create(&paths.config_file_path)?;
+        write!(new_config, "{}", content_yml)?;
 
-            let instructions = [
-               "Go to the Spotify dashboard - https://developer.spotify.com/dashboard/applications",
-               "Click `Create a Client ID` and create an app",
-               "Now click `Edit Settings`",
-               &format!("Add `{}` to the Redirect URIs", LOCALHOST),
-               "You are now ready to authenticate with Spotify!",
-            ];
-
-            let mut number = 1;
-            for item in instructions.iter() {
-                println!("  {}. {}", number, item);
-                number += 1;
-            }
-
-            // TODO: Handle empty input?
-            let mut client_id = String::new();
-            println!("\nEnter your Client ID: ");
-            stdin().read_line(&mut client_id)?;
-
-            let mut client_secret = String::new();
-            println!("\nEnter your Client Secret: ");
-            stdin().read_line(&mut client_secret)?;
-
-            let config_yml = ClientConfig {
-                client_id: client_id.trim().to_string(),
-                client_secret: client_secret.trim().to_string(),
-                device_id: None,
-            };
-
-            let content_yml = serde_yaml::to_string(&config_yml)?;
-
-            let mut new_config = fs::File::create(&paths.config_file_path)?;
-            write!(new_config, "{}", content_yml)?;
-
-            self.client_id = config_yml.client_id;
-            self.client_secret = config_yml.client_secret;
-            self.device_id = config_yml.device_id;
-
-            Ok(())
-        }
+        Ok(())
     }
 }
